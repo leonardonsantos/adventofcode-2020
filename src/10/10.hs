@@ -1,15 +1,15 @@
 -- https://adventofcode.com/2020/day/10
 
 import qualified Data.Set as Set
+import Data.List
 
 main = do
   contents <- getContents
   let adapters = fmap (\x -> read x :: Int) (lines contents)
   let (diff1, diff3) = useAdaptersGreedy adapters
   print (diff1 * diff3)
-  let allPossibilities = useAdaptersAllPossibilities adapters
---  print allPossibilities
-  print $ length allPossibilities
+  let nAllPossibilities = countAllPossibilities adapters
+  print nAllPossibilities
 
 useAdaptersGreedy :: [Int] -> (Int,Int)
 useAdaptersGreedy xs = calculate (Set.fromList xs) 0 (0,0)
@@ -23,39 +23,43 @@ useAdaptersGreedy xs = calculate (Set.fromList xs) 0 (0,0)
             then calculate mySet (i+3) (diff1, diff3+1)
             else (diff1, diff3+1)
 
-useAdaptersAllPossibilities :: [Int] -> [[Int]]
-useAdaptersAllPossibilities xs =
+data Tree a = Nil | Node a [Tree a] deriving (Show, Eq)
+
+addChild :: Tree a -> Tree a -> Tree a
+addChild (Node n xs) Nil = Node n xs
+addChild (Node n xs) child = Node n (child:xs)
+
+countNodesEqual :: (Eq a) => a -> Tree a -> Int
+countNodesEqual _ Nil = 0
+countNodesEqual x (Node n []) =
+  if (n == x)
+    then 1
+    else 0
+countNodesEqual x (Node n children) =
+  foldr (+) 0 $ fmap (countNodesEqual x) children
+
+countAllPossibilities :: [Int] -> Int
+countAllPossibilities xs =
   let
     mySet = Set.fromList xs
-    possibilities = Set.toList $ calculate mySet (Set.fromList [[0]])
+    t = buildTreePossibilities mySet (Node 0 [])
     myMax = Set.findMax mySet
   in
-    filter (\ (x:xs) -> x==myMax) possibilities
-  where
-    calculate :: Set.Set Int -> Set.Set [Int] -> Set.Set [Int]
-    calculate mySet xss =
-      let
-        newXss = calculate' mySet xss
-      in
-        if (newXss == xss)
-          then newXss
-          else calculate mySet newXss
+    countNodesEqual myMax t
 
-    calculate' :: Set.Set Int -> Set.Set [Int] -> Set.Set [Int]
-    calculate' mySet xss = Set.foldl func Set.empty xss
-      where
-        func :: Set.Set [Int] -> [Int] -> Set.Set [Int]
-        func acc xs =
-          let
-            i = head xs
-            diff1 = if (Set.member (i+1) mySet)
-                      then Set.fromList [(i+1):xs]
-                      else Set.fromList [xs]
-            diff2 = if (Set.member (i+2) mySet)
-                      then Set.fromList [(i+2):xs]
-                      else Set.fromList [xs]
-            diff3 = if (Set.member (i+3) mySet)
-                      then Set.fromList [(i+3):xs]
-                      else Set.fromList [xs]
-          in
-            acc `Set.union` diff1 `Set.union` diff2 `Set.union` diff3
+buildTreePossibilities :: Set.Set Int -> Tree Int -> Tree Int
+buildTreePossibilities _ Nil = Nil
+buildTreePossibilities mySet t =
+  let
+    Node n children = t
+    t1 = buildTreePossibilities mySet $ tryAdaptor mySet (n+1)
+    t2 = buildTreePossibilities mySet $ tryAdaptor mySet (n+2)
+    t3 = buildTreePossibilities mySet $ tryAdaptor mySet (n+3)
+  in
+    addChild (addChild (addChild t t1) t2) t3
+  where
+    tryAdaptor mySet n =
+      if (Set.member n mySet)
+        then Node n []
+        else Nil
+
