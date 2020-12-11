@@ -7,6 +7,9 @@ main = do
   let answers = parse contents
   let c = countAnswers answers
   print c
+  let answers2 = parse2 contents
+  let c2 = countAnswers2 answers2
+  print c2
 
 breakOnEmptyLine :: String -> [String]
 breakOnEmptyLine "" = []
@@ -34,3 +37,17 @@ countAnswers answers =
     counts = fmap Set.size sets
   in
     foldl (+) 0 counts
+
+
+parse2 :: String -> [[String]]
+parse2 contents = fmap lines $ breakOnEmptyLine contents
+
+countAnswers2 :: [[String]] -> Int
+countAnswers2 answers =
+  let
+    listListSets = fmap (fmap Set.fromList) answers
+    intersections = fmap (foldl1 Set.intersection) listListSets
+    counts = fmap Set.size intersections
+  in
+    foldl (+) 0 counts
+
