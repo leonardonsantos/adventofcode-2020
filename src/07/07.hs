@@ -11,6 +11,8 @@ main = do
   let rset = children "shiny gold" reversed Set.empty
   let count = Set.size $ Set.delete "shiny gold" rset
   print count
+  let count2 = countBags "shiny gold" parsed
+  print (count2 - 1)
 
 parse s =
   let
@@ -77,3 +79,11 @@ children node m set =
     if (Set.notMember node set) && (Map.member node m)
       then foldl (\set'' (n,bag) -> children bag m set'') set' ((Map.!) m node)
       else set'
+
+-- DFS
+countBags :: String -> Map.Map String [(Int,String)] -> Int
+countBags node m =
+  if (Map.notMember node m)
+    then 1
+    else 1 + (foldl (\acc (n',bag) -> acc + n' * (countBags bag m)) 0 ((Map.!) m node))
+-- TODO: consider loops in graph
