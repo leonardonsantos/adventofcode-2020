@@ -7,17 +7,17 @@ import Data.Maybe
 
 main = do
   contents <- getContents
-  let adapters = fmap (\x -> read x :: Int) (lines contents)
+  let adapters = fmap (\x -> read x :: Integer) (lines contents)
   let (diff1, diff3) = useAdaptersGreedy adapters
   print (diff1 * diff3)
   let setAdapters = Set.fromList adapters
-  let (r2,_) = allPoss setAdapters
+  let r2 = allPoss setAdapters
   print r2
 
-useAdaptersGreedy :: [Int] -> (Int,Int)
+useAdaptersGreedy :: [Integer] -> (Integer,Integer)
 useAdaptersGreedy xs = calculate (Set.fromList xs) 0 (0,0)
   where
-    calculate :: Set.Set Int -> Int -> (Int,Int) -> (Int,Int)
+    calculate :: Set.Set Integer -> Integer -> (Integer,Integer) -> (Integer,Integer)
     calculate mySet i (diff1, diff3) =
       if (Set.member (i+1) mySet)
         then calculate mySet (i+1) (diff1+1, diff3)
@@ -50,28 +50,30 @@ Solve 0 = Solve 1 = Solve 4 = 8
 So we can keep the result of already computed partial solutions.
 -}
 
---allPoss :: Set.Set Int -> Int
-allPoss setAdapters = solve 0 (Set.insert 0 setAdapters) Map.empty
+allPoss :: Set.Set Integer -> Integer
+allPoss setAdapters = fst $ solve 0 (Set.insert 0 setAdapters) Map.empty (Set.findMax setAdapters)
 
-solve :: Int -> Set.Set Int -> Map.Map Int Int -> (Int, Map.Map Int Int)
-solve n set dict | otherwise =
+solve :: Integer -> Set.Set Integer -> Map.Map Integer Integer -> Integer -> (Integer, Map.Map Integer Integer)
+solve n set dict stop =
   let
     (r1,d1) = try n 1 dict
     (r2,d2) = try n 2 d1
     (r3,d3) = try n 3 d2
-    r = if (Set.null set) || (not $ Set.member n set)
-          then 0
+    r = if n == stop
+          then 1
           else
-            if Set.lookupMax set == Just n
-              then 1
+            if (n > stop) || (Set.null set) || (not $ Set.member n set)
+              then 0
               else r1 + r2 + r3
-    d4 = Map.insert n r d3
-    d' = if (Set.null set) || (not $ Set.member n set) || ((Set.size set == 1) && (Set.member n set))
-           then Map.insert n r dict
-           else Map.insert n r d3
+    useThisDict = if (n == stop) || (n > stop) || (Set.null set) || (not $ Set.member n set)
+                    then dict
+                    else d3
+    d = Map.insert n r useThisDict
   in
-    (r, d')
+    if Map.member n dict
+      then (dict Map.! n, dict)
+      else (r, d)
   where
     try n i dict' =
       let set' = Set.delete n set
-      in solve (n+i) set' dict'
+      in solve (n+i) set' dict' stop
