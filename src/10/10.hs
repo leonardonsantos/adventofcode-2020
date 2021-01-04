@@ -1,9 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- https://adventofcode.com/2020/day/10
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.List
 import Data.Maybe
+import Control.Monad.Memo
 
 main = do
   contents <- getContents
@@ -13,6 +16,9 @@ main = do
   let setAdapters = Set.fromList adapters
   let r2 = allPoss setAdapters
   print r2
+  -- r3 <- solve2 0 (Set.insert 0 setAdapters) (Set.findMax setAdapters)
+  let r3 = startEvalMemo $ solve2 0 (Set.insert 0 setAdapters) (Set.findMax setAdapters)
+  print r3
 
 useAdaptersGreedy :: [Integer] -> (Integer,Integer)
 useAdaptersGreedy xs = calculate (Set.fromList xs) 0 (0,0)
@@ -77,3 +83,13 @@ solve n set dict stop =
     try n i dict' =
       let set' = Set.delete n set
       in solve (n+i) set' dict' stop
+
+solve2 :: (MonadMemo (Integer, Set.Set Integer, Integer) Integer m) => Integer -> Set.Set Integer -> Integer -> m Integer
+solve2 n _ stop | n == stop = return 1
+solve2 n _ stop | n > stop = return 0
+solve2 n set _ | (Set.null set) || (not $ Set.member n set) = return 0
+solve2 n set stop | otherwise = do
+  r1 <- for3 memo solve2 (n+1) set stop
+  r2 <- for3 memo solve2 (n+2) set stop
+  r3 <- for3 memo solve2 (n+3) set stop
+  return (r1 + r2 + r3)
